@@ -11,19 +11,17 @@
 	"homepage": "https://bitbucket.org/elegantmedia/laravel-test-kit/",
 	"authors": [
 		{
-			"name": "Elegant Media",
-			"email": "info@elegantmedia.com.au"
+			"name": "Shane Perera",
+			"email": "shane@elegantmedia.com.au"
 		}
 	],
 	"require": {
-		"php" : "^8.1",
-		"illuminate/support": "^10.0",
-		"illuminate/mail": "^10.0"
+		"php" : "^8.0",
+		"illuminate/support": "^9.0"
 	},
 	"require-dev": {
-		"orchestra/testbench": "^8.0",
-		"squizlabs/php_codesniffer": "^3.7",
-		"symfony/mailer": "^6.2"
+		"squizlabs/php_codesniffer": "^3.0",
+		"swiftmailer/swiftmailer": "^6.2"
 	},
 	"autoload": {
 		"psr-4": {

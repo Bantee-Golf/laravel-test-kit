@@ -12,28 +12,44 @@ namespace EMedia\TestKit\Traits;
 */
 
 use EMedia\TestKit\Mail\TestingMailEventListener;
+use Illuminate\Support\Facades\Mail;
+use Swift_Message;
 
 trait MailTracking
 {
+	/**
+	 * Delivered emails.
+	 */
+	protected $emails = [];
 
 	/**
+	 * Register a listener for new emails.
 	 *
-	 * Returns sent emails using Symfony transport
-	 *
-	 * @return mixed
+	 * @before
 	 */
-	protected function getSentEmails()
+	public function setUpMailTracking(): void
 	{
-		return $this->app->make('mailer')->getSymfonyTransport()->messages();
+		Mail::getSwiftMailer()
+			->registerPlugin(new TestingMailEventListener($this));
+	}
+
+	/**
+	 * Store a new swift message.
+	 *
+	 * @param Swift_Message $email
+	 */
+	public function addEmail(Swift_Message $email): void
+	{
+		$this->emails[] = $email;
 	}
 
 	/**
 	 * Assert that no emails were sent.
 	 */
-	protected function dontSeeEmailWasSent(): self
+	protected function seeEmailWasNotSent(): self
 	{
 		$this->assertEmpty(
-			$this->getSentEmails(),
+			$this->emails,
 			'Did not expect any emails to have been sent.'
 		);
 
@@ -47,18 +63,47 @@ trait MailTracking
 	 *
 	 * @return MailTracking
 	 */
-	protected function seeEmailCount(int $count): self
+	protected function seeEmailsSent(int $count): MailTracking
 	{
-		$emailsSent = $this->getSentEmails();
-		$sentCount = count($emailsSent);
-
+		$emailsSent = count($this->emails);
 		$this->assertCount(
 			$count,
-			$emailsSent,
-			"Expected $count emails to have been sent, but $sentCount were."
+			$this->emails,
+			"Expected $count emails to have been sent, but $emailsSent were."
+		);
+		return $this;
+	}
+
+	/**
+	 * Assert that the last email's body equals the given text.
+	 *
+	 * @param string $body
+	 * @param Swift_Message|null $message
+	 *
+	 * @return MailTracking
+	 */
+	protected function seeEmailEquals(string $body, Swift_Message $message = null): self
+	{
+		$this->assertEquals(
+			$body,
+			$this->getEmail($message)->getBody(),
+			"No email with the provided body was sent."
 		);
 
 		return $this;
+	}
+
+	/**
+	 * Retrieve the appropriate swift message.
+	 *
+	 * @param Swift_Message|null $message
+	 *
+	 * @return mixed|Swift_Message|null
+	 */
+	protected function getEmail(Swift_Message $message = null)
+	{
+		$this->seeEmailWasSent();
+		return $message ?: $this->lastEmail();
 	}
 
 	/**
@@ -67,10 +112,9 @@ trait MailTracking
 	protected function seeEmailWasSent(): self
 	{
 		$this->assertNotEmpty(
-			$this->getSentEmails(),
+			$this->emails,
 			'No emails have been sent.'
 		);
-
 		return $this;
 	}
 
@@ -79,73 +123,24 @@ trait MailTracking
 	 */
 	protected function lastEmail()
 	{
-		$emailsSent = $this->getSentEmails();
-
-		return $emailsSent->last();
+		return end($this->emails);
 	}
 
 	/**
 	 * Assert that the last email's body contains the given text.
 	 *
-	 */
-	protected function seeLastEmailSentTo(string|array $recipientEmails): self
-	{
-		// if $recipientEmails is a string, convert it to an array
-		if (is_string($recipientEmails)) {
-			$recipientEmails = [$recipientEmails];
-		}
-
-		$lastEmail = $this->lastEmail();
-		$this->assertNotNull($lastEmail, 'No emails have been sent.');
-
-		$to = $lastEmail->getEnvelope()->getRecipients();
-
-		$recipients = [];
-		foreach ($to as $address) {
-			$recipients[$address->getAddress()] = $address->getName();
-		}
-
-		foreach ($recipientEmails as $recipientEmail) {
-			$this->assertArrayHasKey(
-				$recipientEmail,
-				$recipients,
-				"No email was sent to $recipientEmail."
-			);
-		}
-
-		return $this;
-	}
-
-	/**
-	 * @param string|array $recipientEmails
+	 * @param string $excerpt
+	 * @param Swift_Message|null $message
 	 *
 	 * @return MailTracking
 	 */
-	protected function dontSeeLastEmailSentTo(string|array $recipientEmails): self
+	protected function seeEmailContains(string $excerpt, Swift_Message $message = null): self
 	{
-		// if $recipientEmails is a string, convert it to an array
-		if (is_string($recipientEmails)) {
-			$recipientEmails = [$recipientEmails];
-		}
-
-		$lastEmail = $this->lastEmail();
-		$this->assertNotNull($lastEmail, 'No emails have been sent.');
-
-		$to = $lastEmail->getEnvelope()->getRecipients();
-
-		$recipients = [];
-		foreach ($to as $address) {
-			$recipients[$address->getAddress()] = $address->getName();
-		}
-
-		foreach ($recipientEmails as $recipientEmail) {
-			$this->assertArrayNotHasKey(
-				$recipientEmail,
-				$recipients,
-				"Email was sent to $recipientEmail. But it should not have been sent."
-			);
-		}
-
+		$this->assertContains(
+			$excerpt,
+			$this->getEmail($message)->getBody(),
+			"No email containing the provided body was found."
+		);
 		return $this;
 	}
 
@@ -153,54 +148,53 @@ trait MailTracking
 	 * Assert that the last email's subject matches the given string.
 	 *
 	 * @param string $subject
+	 * @param Swift_Message|null $message
 	 *
 	 * @return MailTracking
 	 */
-	protected function seeLastEmailSubject(string $subject): self
+	protected function seeEmailSubject(string $subject, Swift_Message $message = null): self
 	{
 		$this->assertEquals(
 			$subject,
-			$this->lastEmail()->getOriginalMessage()->getSubject(),
+			$this->getEmail($message)->getSubject(),
 			"No email with a subject of $subject was found."
 		);
 		return $this;
 	}
 
 	/**
-	 * Assert that the last email's body contains the given text.
+	 * Assert that the last email was sent to the given recipient.
 	 *
-	 * @param string $excerpt
+	 * @param string $recipient
+	 * @param Swift_Message|null $message
 	 *
 	 * @return MailTracking
 	 */
-	protected function seeLastEmailContains(string $excerpt): self
+	protected function seeEmailTo(string $recipient, Swift_Message $message = null): self
 	{
-
-		$this->assertStringContainsString(
-			$excerpt,
-			$this->lastEmail()->getOriginalMessage()->getBody()->toString(),
-			"The text `$excerpt` was not found in the last email."
+		$this->assertArrayHasKey(
+			$recipient,
+			(array)$this->getEmail($message)->getTo(),
+			"No email was sent to $recipient."
 		);
-
 		return $this;
 	}
 
 	/**
-	 * Assert that the last email's body does not contain the given text.
+	 * Assert that the last email was delivered by the given address.
 	 *
-	 * @param string $excerpt
+	 * @param string $sender
+	 * @param Swift_Message|null $message
 	 *
 	 * @return MailTracking
 	 */
-	protected function dontSeeLastEmailContains(string $excerpt): self
+	protected function seeEmailFrom(string $sender, Swift_Message $message = null): self
 	{
-
-		$this->assertStringNotContainsString(
-			$excerpt,
-			$this->lastEmail()->getOriginalMessage()->getBody()->toString(),
-			"The text `$excerpt` was found in the last email."
+		$this->assertArrayHasKey(
+			$sender,
+			(array)$this->getEmail($message)->getFrom(),
+			"No email was sent from $sender."
 		);
-
 		return $this;
 	}
 }

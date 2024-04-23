@@ -1,10 +1,13 @@
 # Change Log
 
-## v3.0.0
-- Illuminate 10 Support
-- Dropped PHP 8.0 support
-- Replaced package `swiftmailer/swiftmailer` with `symfony/mailer`
-- Update MailTracking API (see README.md for more info.)
+## Version Compatibility
+
+Use versions as below.
+
+| Laravel Version | This Package Version               | Branch         |
+| ---------------:| ----------------------------------:|---------------:|
+| v9              | 2.0                                | master         |  
+| v8              | 1.0                                | version/v1.0   |   
 
 ## v2.0.0
 - Illuminate 9 Support

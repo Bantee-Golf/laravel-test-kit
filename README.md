@@ -3,11 +3,10 @@
 
 ### Version Compatibility
 
-| Laravel Version | This Package Version |       Branch |
-|----------------:|---------------------:|-------------:|
-|             v10 |                  3.x |          3.x |  
-|              v9 |                  2.0 |          2.x |  
-|              v8 |                  1.0 | version/v1.0 |  
+| Laravel Version | This Package Version               | Branch         |
+| ---------------:| ----------------------------------:|---------------:|
+| v9              | 2.0                                | master         |  
+| v8              | 1.0                                | version/v1.0   |  
 
 See [CHANGE LOG](CHANGELOG.md) for change history.
 
@@ -66,98 +65,22 @@ $model = $this->getUserModel();
 
 ## Testing Emails
 
-### Test Using Array Driver
-
-You can use the array driver to test emails. This method is only possible when using PHPUnit within the same process as the application. This is the default behaviour when running `phpunit` from the command line. You can use this method with `BrowserKit` tests as well. But this method will not work with `Dusk` tests. For `Dusk` tests, you will need to use `log` driver method mentioned below.
-
-In your `phpunit.xml`, or `.env` file add the `array` mail driver.
+In your `phpunit.xml` add the mail driver.
 ```
-<env name="MAIL_DRIVER" value="array" />
+<env name="MAIL_DRIVER" value="log" />
 ```
 
 ``` php
-use \EMedia\TestKit\Traits\MailTracking;
+use MailTracking;
 
 public function testAdminCanLogin(): void
 {
     // do something that triggers an email
-    
-    // verify an email was sent
-    $this->seeEmailWasSent();
-    
-    // verify no emails sent
-    $this->dontSeeEmailWasSent();
-    
-    // verify email count
-    $this->seeEmailCount(1);
-    
-    // verify last email sent to address
-    $this->seeLastEmailSentTo('john@example.com');
-    $this->seeLastEmailSentTo(['john@example.com', 'jane@example.com]);
-    
-    // verify last email not sent to address
-    $this->dontSeeLastEmailSentTo('john@example.com');
-    $this->dontSeeLastEmailSentTo(['john@example.com', 'jane@example.com]);
-    
-    // verify last email recepients
-    $this->seeEmailSubject('Subject Line');
-    
-    // verify last email contains text
-    $this->seeLastEmailContains('Test Message');
-    
-    // verify last email don't contain text
-    $this->dontSeeLastEmailContains('Test Message');
-        
-    // get an array of sent emails from array driver
-    $emails = $this->getSentEmails();
-    
-    // get the last email
-    $email = $this->lastEmail();
-}	
-```
 
-### Test Using Log Driver
-
-You can use the log driver to test emails. This method can be used with `Dusk`, `BrowserKit` and `PHPUnit` tests. This method will work with any test that is run in a separate process to the application.
-
-```php
-use \EMedia\TestKit\Traits\LogMailTracking;
-
-public function testAdminCanLogin(): void
-{
-    // do something that triggers an email
-    
-    // verify an email was sent
-    $this->seeEmailWasSent();
-    
-    // verify no emails sent
-    $this->dontSeeEmailWasSent();
-    
-    // verify email count
-    $this->seeEmailCount(1);
-    
-    // verify last email sent to address
-    $this->seeLastEmailSentTo('john@example.com');
-    $this->seeLastEmailSentTo(['john@example.com', 'jane@example.com]);
-    
-    // verify last email not sent to address
-    $this->dontSeeLastEmailSentTo('john@example.com');
-    $this->dontSeeLastEmailSentTo(['john@example.com', 'jane@example.com]);
-    
-    // verify last email recepients
-    $this->seeEmailSubject('Subject Line');
-    
-    // verify last email contains text
-    $this->seeLastEmailContains('Test Message');
-    
-    // verify last email don't contain text
-    $this->dontSeeLastEmailContains('Test Message');
-        
-    // get an array of sent emails from array driver
-    $emails = $this->getSentEmails();
-    
-    // get the last email
-    $email = $this->lastEmail();
+    $this->seeEmailWasSent()
+         ->seeEmailSubject('Subject Line')
+         ->seeEmailTo('john@example.com')
+         ->seeEmailContains('Test Message');
 }	
 ```
 
